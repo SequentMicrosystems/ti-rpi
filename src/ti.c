@@ -1,5 +1,5 @@
 /*
- * rtd.c:
+ * ti.c:
  *	Command-line interface to the Raspberry
  *	Pi's Thermal Integration board.
  *	Copyright (c) 2016-2022 Sequent Microsystem
@@ -20,7 +20,7 @@
 
 #define VERSION_BASE	(int)1
 #define VERSION_MAJOR	(int)0
-#define VERSION_MINOR	(int)0
+#define VERSION_MINOR	(int)2
 
 #define UNUSED(X) (void)X      /* To avoid gcc/g++ warnings */
 
@@ -209,7 +209,7 @@ const CliCmdType CMD_LIST =
 
 static void doList(int argc, char *argv[])
 {
-	
+
 	UNUSED(argc);
 	UNUSED(argv);
 
@@ -226,14 +226,14 @@ static void doList(int argc, char *argv[])
 
 static void doBoard(int argc, char *argv[]);
 const CliCmdType CMD_BOARD =
-{
-	"board",
-	1,
-	&doBoard,
-	"\tboard		Display the board status and firmware version number\n",
-	"\tUsage:		ti board\n",
-	"",
-	"\tExample:		ti board  Display vcc, temperature, firmware version, battery voltage \n"};
+	{
+		"board",
+		1,
+		&doBoard,
+		"\tboard		Display the board status and firmware version number\n",
+		"\tUsage:		ti board\n",
+		"",
+		"\tExample:		ti board  Display vcc, temperature, firmware version, battery voltage \n"};
 
 static void doBoard(int argc, char *argv[])
 {
@@ -243,9 +243,8 @@ static void doBoard(int argc, char *argv[])
 	int temperature = 25;
 	float vIn = 24;
 	float vBatt = 5;
-	
-	
-		UNUSED(argv);
+
+	UNUSED(argv);
 	if (argc != 2)
 	{
 		printf("Invalid arguments number type \"ti -h\" for details\n");
@@ -297,11 +296,10 @@ static void doRTCBatt(int argc, char *argv[])
 	int dev = -1;
 	u8 buff[5];
 	int resp = 0;
-	
+
 	float vBatt = 5;
-	
-	
-		UNUSED(argv);
+
+	UNUSED(argv);
 	if (argc != 2)
 	{
 		printf("Invalid arguments number type \"ti -h\" for details\n");
@@ -318,7 +316,7 @@ static void doRTCBatt(int argc, char *argv[])
 		printf("Fail to read board info!\n");
 		exit(1);
 	}
-	
+
 	memcpy(&resp, &buff[0], 2);
 	vBatt = (float)resp / 1000; //read in milivolts	
 
@@ -422,7 +420,7 @@ const CliCmdType CMD_TRIAC_WRITE =
 	1,
 	&doRelayWrite,
 	"\trelwr:		Set relays (AC switch) On/Off\n",
-	"\tUsage:		ti relwr <channel> <on/off>\n",
+	"\tUsage:		ti relwr <channel> <0/1>\n",
 	"\tUsage:		ti relwr <value>\n",
 	"\tExample:		ti relwr 2 1; Turn relay #2 On\n"};
 
@@ -436,7 +434,7 @@ static void doRelayWrite(int argc, char *argv[])
 	int valR = 0;
 	int retry = 0;
 
-	if ( (argc != 5) && (argc != 4))
+	if ( (argc != 3) && (argc != 4))
 	{
 		printf("%s", CMD_TRIAC_WRITE.usage1);
 		printf("%s", CMD_TRIAC_WRITE.usage2);
@@ -448,29 +446,29 @@ static void doRelayWrite(int argc, char *argv[])
 	{
 		exit(1);
 	}
-	if (argc == 5)
+	if (argc == 4)
 	{
-		pin = atoi(argv[3]);
+		pin = atoi(argv[2]);
 		if ( (pin < CHANNEL_NR_MIN) || (pin > RELAY_CH_NR_MAX))
 		{
 			printf("Relay channel number value out of range\n");
 			exit(1);
 		}
 
-		/**/if ( (strcasecmp(argv[4], "up") == 0)
-			|| (strcasecmp(argv[4], "on") == 0))
+		/**/if ( (strcasecmp(argv[3], "up") == 0)
+			|| (strcasecmp(argv[3], "on") == 0))
 			state = ON;
-		else if ( (strcasecmp(argv[4], "down") == 0)
-			|| (strcasecmp(argv[4], "off") == 0))
+		else if ( (strcasecmp(argv[3], "down") == 0)
+			|| (strcasecmp(argv[3], "off") == 0))
 			state = OFF;
 		else
 		{
-			if ( (atoi(argv[4]) >= STATE_COUNT) || (atoi(argv[4]) < 0))
+			if ( (atoi(argv[3]) >= STATE_COUNT) || (atoi(argv[3]) < 0))
 			{
 				printf("Invalid relay state!\n");
 				exit(1);
 			}
-			state = (OutStateEnumType)atoi(argv[4]);
+			state = (OutStateEnumType)atoi(argv[3]);
 		}
 
 		retry = RETRY_TIMES;
@@ -503,8 +501,8 @@ static void doRelayWrite(int argc, char *argv[])
 	}
 	else
 	{
-		val = atoi(argv[3]);
-		if (val < 0 || val > 0x0f)
+		val = atoi(argv[2]);
+		if (val < 0 || val > 0x03)
 		{
 			printf("Invalid relay value\n");
 			exit(1);
@@ -607,7 +605,7 @@ const CliCmdType CMD_TEST =
 	"\treltest:		Turn ON and OFF the relays until press a key\n",
 	"\tUsage:		ti reltest\n",
 	"",
-	"\tExample:		ti treltest\n"};
+	"\tExample:		ti reltest\n"};
 
 static void doRelayTest(int argc, char* argv[])
 {
@@ -618,21 +616,19 @@ static void doRelayTest(int argc, char* argv[])
 	int valR;
 	int relayResult = 0;
 	FILE* file = NULL;
-	const u8 relayOrder[4] =
+	const u8 relayOrder[2] =
 	{
 		1,
-		2,
-		3,
-		4, };
+		2, };
 
 	dev = doBoardInit();
 	if (dev <= 0)
 	{
 		exit(1);
 	}
-	if (argc == 4)
+	if (argc == 3)
 	{
-		file = fopen(argv[3], "w");
+		file = fopen(argv[2], "w");
 		if (!file)
 		{
 			printf("Fail to open result file\n");
@@ -640,7 +636,7 @@ static void doRelayTest(int argc, char* argv[])
 		}
 	}
 //relay test****************************
-	if (strcasecmp(argv[2], "trtest") == 0)
+	if (strcasecmp(argv[1], "reltest") == 0)
 	{
 		trVal = 0;
 		printf(
@@ -648,7 +644,7 @@ static void doRelayTest(int argc, char* argv[])
 		startThread();
 		while (relayResult == 0)
 		{
-			for (i = 0; i < 4; i++)
+			for (i = 0; i < 2; i++)
 			{
 				relayResult = checkThreadResult();
 				if (relayResult != 0)
@@ -682,7 +678,7 @@ static void doRelayTest(int argc, char* argv[])
 				busyWait(150);
 			}
 
-			for (i = 0; i < 4; i++)
+			for (i = 0; i < 2; i++)
 			{
 				relayResult = checkThreadResult();
 				if (relayResult != 0)
@@ -1058,14 +1054,14 @@ static void doCountRead(int argc, char *argv[])
 
 static void doCountReset(int argc, char *argv[]);
 const CliCmdType CMD_COUNTER_RST =
-	{
-		"countrst",
-		1,
-		&doCountReset,
-		"\tcountrst:	Reset dry contact transitions count\n",
-		"\tUsage:		ti countrst <channel>\n",
-		"",
-		"\tExample:		ti countrst 2; Reset transitions count of dry contact pin #2\n"};
+{
+	"countrst",
+	1,
+	&doCountReset,
+	"\tcountrst:	Reset dry contact transitions count\n",
+	"\tUsage:		ti countrst <channel>\n",
+	"",
+	"\tExample:		ti countrst 2; Reset transitions count of dry contact pin #2\n"};
 
 static void doCountReset(int argc, char *argv[])
 {
@@ -1254,14 +1250,14 @@ int dacSet(int dev, int ch, float val)
 
 static void doDacRead(int argc, char *argv[]);
 const CliCmdType CMD_DAC_READ =
-	{
-		"dacrd",
-		1,
-		&doDacRead,
-		"\tdacrd:		Read DAC voltage value (0 - 10V)\n",
-		"\tUsage:		ti dacrd <channel>\n",
-		"",
-		"\tExample:		ti dacrd 2; Read the voltage on 0-10V out channel #2\n"};
+{
+	"dacrd",
+	1,
+	&doDacRead,
+	"\tdacrd:		Read DAC voltage value (0 - 10V)\n",
+	"\tUsage:		ti dacrd <channel>\n",
+	"",
+	"\tExample:		ti dacrd 2; Read the voltage on 0-10V out channel #2\n"};
 
 static void doDacRead(int argc, char *argv[])
 {
@@ -1301,14 +1297,14 @@ static void doDacRead(int argc, char *argv[])
 
 static void doDacWrite(int argc, char *argv[]);
 const CliCmdType CMD_DAC_WRITE =
-	{
-		"dacwr",
-		1,
-		&doDacWrite,
-		"\tdacwr:		Write DAC output voltage value (0..10V)\n",
-		"\tUsage:		ti dacwr <channel> <value>\n",
-		"",
-		"\tExample:		ti dacwr 2 2.5; Write 2.5V to 0-10V out channel #2\n"};
+{
+	"dacwr",
+	1,
+	&doDacWrite,
+	"\tdacwr:		Write DAC output voltage value (0..10V)\n",
+	"\tUsage:		ti dacwr <channel> <value>\n",
+	"",
+	"\tExample:		ti dacwr 2 2.5; Write 2.5V to 0-10V out channel #2\n"};
 
 static void doDacWrite(int argc, char *argv[])
 {
@@ -1347,6 +1343,150 @@ static void doDacWrite(int argc, char *argv[])
 	else
 	{
 		printf("Invalid params number:\n %s", CMD_DAC_WRITE.usage1);
+		exit(1);
+	}
+}
+
+int odGet(int dev, int ch, float* val)
+{
+	u8 buff[2] =
+	{
+		0,
+		0};
+	u16 raw = 0;
+
+	if ( (ch < CHANNEL_NR_MIN) || (ch > OD_CH_NR_MAX))
+	{
+		printf("Open drain output channel out of range!\n");
+		return ERROR;
+	}
+	if (OK != i2cMem8Read(dev, I2C_MEM_OD_VAL1 + 2 * (ch - 1), buff, 2))
+	{
+		printf("Fail to read!\n");
+		return ERROR;
+	}
+	memcpy(&raw, buff, 2);
+	*val = (float)raw / 100;
+	return OK;
+}
+
+int odSet(int dev, int ch, float val)
+{
+	u8 buff[2] =
+	{
+		0,
+		0};
+	u16 raw = 0;
+
+	if ( (ch < CHANNEL_NR_MIN) || (ch > OD_CH_NR_MAX))
+	{
+		printf("Open drain output channel out of range!\n");
+		return ERROR;
+	}
+	if (val < 0)
+	{
+		val = 0;
+	}
+	if (val > 100)
+	{
+		val = 100;
+	}
+	raw = (u16)ceil(val * 100);
+	memcpy(buff, &raw, 2);
+	if (OK != i2cMem8Write(dev, I2C_MEM_OD_VAL1 + 2 * (ch - 1), buff, 2))
+	{
+		printf("Fail to write!\n");
+		return ERROR;
+	}
+	return OK;
+}
+
+static void doOdRead(int argc, char *argv[]);
+const CliCmdType CMD_OD_READ =
+{
+	"odrd",
+	1,
+	&doOdRead,
+	"\todrd:		Read open drain pwm value (0 - 100%)\n",
+	"\tUsage:		ti odrd <channel>\n",
+	"",
+	"\tExample:		ti odrd 2; Read the pwm on open drain out channel #2\n"};
+
+static void doOdRead(int argc, char *argv[])
+{
+	int ch = 0;
+	float val = 0;
+	int dev = 0;
+
+	dev = doBoardInit();
+	if (dev <= 0)
+	{
+		exit(1);
+	}
+
+	if (argc == 3)
+	{
+		ch = atoi(argv[2]);
+
+		if (OK != odGet(dev, ch, &val))
+		{
+			printf("Fail to read!\n");
+			exit(1);
+		}
+
+		printf("%0.2f\n", val);
+	}
+	else
+	{
+		printf("Invalid params number:\n %s", CMD_OD_READ.usage1);
+		exit(1);
+	}
+}
+
+static void doOdWrite(int argc, char *argv[]);
+const CliCmdType CMD_OD_WRITE =
+	{
+		"odwr",
+		1,
+		&doOdWrite,
+		"\todwr:		Write the open drain output pwm value (0..100%)\n",
+		"\tUsage:		ti odwr <channel> <value>\n",
+		"",
+		"\tExample:		ti odwr 2 2.5; Write 2.5% PWM to open drain output channel #2\n"};
+
+static void doOdWrite(int argc, char *argv[])
+{
+	int ch = 0;
+	int dev = 0;
+	float pwm = 0;
+
+	dev = doBoardInit();
+	if (dev <= 0)
+	{
+		exit(1);
+	}
+
+	if (argc == 4)
+	{
+		ch = atoi(argv[2]);
+
+		pwm = atof(argv[3]);
+		if (pwm < 0 || pwm > 100)
+		{
+			printf("Invalid pwm value, must be 0..100 \n");
+			exit(1);
+		}
+
+		if (OK != odSet(dev, ch, pwm))
+		{
+			printf("Fail to write!\n");
+			exit(1);
+		}
+		printf("done\n");
+	}
+	else
+	{
+		printf("Invalid params number:\n %s", CMD_OD_WRITE.usage1);
 		exit(1);
 	}
 }
@@ -1656,20 +1796,20 @@ int rPwmGet(int dev, int ch, float* val)
 		return ERROR;
 	}
 	memcpy(&raw, buff, 2);
-	*val = (float)raw / 10;//express in precent
+	*val = (float)raw / 10; //express in precent
 	return OK;
 }
 
 static void doPWMRead(int argc, char *argv[]);
 const CliCmdType CMD_PWM_READ =
-	{
-		"pwmrd",
-		1,
-		&doPWMRead,
-		"\tpwmrd:		Read PWM input\n",
-		"\tUsage:		ti pwmrd <channel>\n",
-		"",
-		"\tExample:	ti pwmrd 2; Read the pwm input filling factor on channel #2\n"};
+{
+	"pwmrd",
+	1,
+	&doPWMRead,
+	"\tpwmrd:		Read PWM input\n",
+	"\tUsage:		ti pwmrd <channel>\n",
+	"",
+	"\tExample:	ti pwmrd 2; Read the pwm input filling factor on channel #2\n"};
 
 static void doPWMRead(int argc, char *argv[])
 {
@@ -1706,8 +1846,6 @@ static void doPWMRead(int argc, char *argv[])
 		exit(1);
 	}
 }
-
-
 
 /**
  * Calibration functions
@@ -2303,17 +2441,34 @@ static void doWdtGetOffPeriod(int argc, char *argv[])
 	}
 }
 
+int rtcBatteryVoltGet(int dev, float* val)
+{
+	u8 buff[2];
+	u16 raw = 0;
 
+	if (NULL == val)
+	{
+		return ERROR;
+	}
+
+	if (FAIL == i2cMem8Read(dev, I2C_MEM_RTC_VBAT, buff, 2))
+	{
+		return ERROR;
+	}
+	memcpy(&raw, buff, 2);
+	*val = (float)raw / 1000;
+	return OK;
+}
 static void doRTCGet(int argc, char *argv[]);
 const CliCmdType CMD_RTC_GET =
-	{
-		"rtcrd",
-		1,
-		&doRTCGet,
-		"\trtcrd:		Get the internal RTC  date and time(mm/dd/yy hh:mm:ss)\n",
-		"\tUsage:		ti rtcrd \n",
-		"",
-		"\tExample:	ti rtcrd; Get the nternal RTC time and date  \n"};
+{
+	"rtcrd",
+	1,
+	&doRTCGet,
+	"\trtcrd:		Get the internal RTC  date and time(mm/dd/yy hh:mm:ss)\n",
+	"\tUsage:		ti rtcrd \n",
+	"",
+	"\tExample:	ti rtcrd; Get the nternal RTC time and date  \n"};
 
 static void doRTCGet(int argc, char *argv[])
 {
@@ -2344,6 +2499,47 @@ static void doRTCGet(int argc, char *argv[])
 		exit(1);
 	}
 }
+
+static void doRTCBattGet(int argc, char *argv[]);
+const CliCmdType CMD_RTC_BATT_GET =
+{
+	"rtcbrd",
+	1,
+	&doRTCBattGet,
+	"\rtcbrd:		Get the internal RTC backup battery voltage\n",
+	"\tUsage:		ti rtcbrd \n",
+	"",
+	"\tExample:	ti rtcbrd; Get the internal RTC backup battery voltage \n"};
+
+static void doRTCBattGet(int argc, char *argv[])
+{
+	int dev = 0;
+	float volt = 0;
+
+	UNUSED(argv);
+	dev = doBoardInit();
+	if (dev <= 0)
+	{
+		exit(1);
+	}
+
+	if (argc == 2)
+	{
+		if (OK != rtcBatteryVoltGet(dev, &volt))
+		{
+			printf("Fail to read RTC Battery!\n");
+			exit(1);
+		}
+
+		printf("%.2f V\n", volt);
+	}
+	else
+	{
+		printf("Invalid params number:\n %s", CMD_RTC_BATT_GET.usage1);
+		exit(1);
+	}
+}
+
 
 static void doRTCSet(int argc, char *argv[]);
 const CliCmdType CMD_RTC_SET =
@@ -2427,6 +2623,131 @@ static void doRTCSet(int argc, char *argv[])
 	}
 }
 
+int batteryVoltGet(int dev, float* val)
+{
+	u8 buff[2];
+	u16 raw = 0;
+
+	if (NULL == val)
+	{
+		return ERROR;
+	}
+
+	if (FAIL == i2cMem8Read(dev, I2C_DIAG_V_BATT_MEM_ADD, buff, 2))
+	{
+		return ERROR;
+	}
+	memcpy(&raw, buff, 2);
+	*val = (float)raw / 1000;
+	return OK;
+}
+const char stateNames[STATUS_COUNT][20] =
+{
+	"CHARGING",
+	"CHARGE_END",
+	"CHARGE_FAULT",
+	"ON_BATTERY",
+};
+
+int batteryStatusGet(int dev, char* state)
+{
+	u8 buff = 0;
+	if (NULL == state)
+	{
+		return ERROR;
+	}
+	if (FAIL == i2cMem8Read(dev, I2C_DIAG_POWER_STATE_MEM_ADD, &buff, 1))
+	{
+		return ERROR;
+	}
+	if(buff >= STATUS_COUNT)
+	{
+		return ERROR;
+	}
+	sprintf(state,"%s",stateNames[buff]);
+	return OK;
+}
+
+static void doBackupBattGet(int argc, char *argv[]);
+const CliCmdType CMD_BCK_BATT_GET =
+{
+	"bckbrd",
+	1,
+	&doBackupBattGet,
+	"\tbckbrd:		Get the backup battery voltage\n",
+	"\tUsage:		ti bckbrd \n",
+	"",
+	"\tExample:	ti bckbrd; Get the backup battery voltage \n"};
+
+static void doBackupBattGet(int argc, char *argv[])
+{
+	int dev = 0;
+	float volt = 0;
+
+	UNUSED(argv);
+	dev = doBoardInit();
+	if (dev <= 0)
+	{
+		exit(1);
+	}
+
+	if (argc == 2)
+	{
+		if (OK != batteryVoltGet(dev, &volt))
+		{
+			printf("Fail to read Backup Battery voltage!\n");
+			exit(1);
+		}
+
+		printf("%.2f V\n", volt);
+	}
+	else
+	{
+		printf("Invalid params number:\n %s", CMD_BCK_BATT_GET.usage1);
+		exit(1);
+	}
+}
+
+static void doPowerStatusGet(int argc, char *argv[]);
+const CliCmdType CMD_PWR_STAT_GET =
+{
+	"pwrsrd",
+	1,
+	&doPowerStatusGet,
+	"\tpwrsrd:		Get the power supply status\n",
+	"\tUsage:		ti pwrsrd \n",
+	"",
+	"\tExample:	ti pwrsrd; Get the power supply status \n"};
+
+static void doPowerStatusGet(int argc, char *argv[])
+{
+	int dev = 0;
+	char state[20];
+
+	UNUSED(argv);
+	dev = doBoardInit();
+	if (dev <= 0)
+	{
+		exit(1);
+	}
+
+	if (argc == 2)
+	{
+		if (OK != batteryStatusGet(dev, state))
+		{
+			printf("Fail to read Backup Battery voltage!\n");
+			exit(1);
+		}
+
+		printf("%s\n", state);
+	}
+	else
+	{
+		printf("Invalid params number:\n %s", CMD_PWR_STAT_GET.usage1);
+		exit(1);
+	}
+}
+
 const CliCmdType* gCmdArray[] =
 {
 	&CMD_VERSION,
@@ -2445,6 +2766,8 @@ const CliCmdType* gCmdArray[] =
 	&CMD_EDGE_WRITE,
 	&CMD_DAC_READ,
 	&CMD_DAC_WRITE,
+	&CMD_OD_READ,
+	&CMD_OD_WRITE,
 	&CMD_ADC_READ,
 	&CMD_R1K_READ,
 	&CMD_R10K_READ,
@@ -2462,7 +2785,10 @@ const CliCmdType* gCmdArray[] =
 	&CMD_WDT_SET_OFF_PERIOD,
 	&CMD_WDT_GET_OFF_PERIOD,
 	&CMD_RTC_GET,
+	&CMD_RTC_BATT_GET,
 	&CMD_RTC_SET,
+	&CMD_BCK_BATT_GET,
+	&CMD_PWR_STAT_GET,
 	NULL}; //null terminated array of cli structure pointers
 
 int main(int argc, char *argv[])
