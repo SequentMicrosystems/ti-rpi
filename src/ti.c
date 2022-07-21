@@ -20,7 +20,7 @@
 
 #define VERSION_BASE	(int)1
 #define VERSION_MAJOR	(int)0
-#define VERSION_MINOR	(int)2
+#define VERSION_MINOR	(int)3
 
 #define UNUSED(X) (void)X      /* To avoid gcc/g++ warnings */
 
@@ -813,6 +813,28 @@ int contactCountGet(int dev, u8 ch, u32* val)
 	return OK;
 }
 
+int contactPpsGet(int dev, u8 ch, u16* val)
+{
+	u8 buff[2];
+
+	if (NULL == val)
+	{
+		return ERROR;
+	}
+	if ( (ch < CHANNEL_NR_MIN) || (ch > CONTACT_CH_NR_MAX))
+	{
+		printf("Invalid DRY CONTACT nr!\n");
+		return ERROR;
+	}
+	if (FAIL
+		== i2cMem8Read(dev, I2C_MEM_DRY_CONTACT_PPS1 + 2 * (ch - 1), buff, 2))
+	{
+		return ERROR;
+	}
+	memcpy(val, buff, 2);
+	return OK;
+}
+
 int contactCountReset(int dev, u8 channel)
 {
 	u8 buff[4];
@@ -1048,6 +1070,47 @@ static void doCountRead(int argc, char *argv[])
 	else
 	{
 		printf("%s", CMD_COUNTER_READ.usage1);
+		exit(1);
+	}
+}
+
+static void doPpsRead(int argc, char *argv[]);
+const CliCmdType CMD_PPS_READ =
+	{
+		"ppsrd",
+		1,
+		&doPpsRead,
+		"\tppsrd:	Read dry contact transitions per second\n\t\t\tWarning: For this measurements to be valid place the jumper in position \"1K\" \n",
+		"\tUsage:		ti ppsrd <channel>\n",
+		"",
+		"\tExample:		ti ppsrd 2; Read transitions counts per second of dry contact pin #2\n"};
+
+static void doPpsRead(int argc, char *argv[])
+{
+	u8 pin = 0;
+	u16 val = 0;
+	int dev = 0;
+
+	dev = doBoardInit();
+	if (dev <= 0)
+	{
+		exit(1);
+	}
+
+	if (argc == 3)
+	{
+		pin = (u8)atoi(argv[2]);
+
+		if (OK != contactPpsGet(dev, pin, &val))
+		{
+			printf("Fail to read!\n");
+			exit(1);
+		}
+		printf("%u\n", (unsigned int)val);
+	}
+	else
+	{
+		printf("%s", CMD_PPS_READ.usage1);
 		exit(1);
 	}
 }
@@ -2761,6 +2824,7 @@ const CliCmdType* gCmdArray[] =
 	&CMD_TEST,
 	&CMD_CONTACT_READ,
 	&CMD_COUNTER_READ,
+	&CMD_PPS_READ,
 	&CMD_COUNTER_RST,
 	&CMD_EDGE_READ,
 	&CMD_EDGE_WRITE,
