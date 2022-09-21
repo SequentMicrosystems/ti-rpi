@@ -20,7 +20,7 @@
 
 #define VERSION_BASE	(int)1
 #define VERSION_MAJOR	(int)0
-#define VERSION_MINOR	(int)3
+#define VERSION_MINOR	(int)4
 
 #define UNUSED(X) (void)X      /* To avoid gcc/g++ warnings */
 
@@ -323,7 +323,7 @@ static void doRTCBatt(int argc, char *argv[])
 	printf("%0.2f V\n", vBatt);
 }
 
-//*************************************************************
+//**************************RELAYS**********************************
 int relayChSet(int dev, u8 channel, OutStateEnumType state)
 {
 	int resp = 0;
@@ -556,9 +556,9 @@ static void doRelayRead(int argc, char *argv[])
 		exit(1);
 	}
 
-	if (argc == 4)
+	if (argc == 3)
 	{
-		pin = atoi(argv[3]);
+		pin = atoi(argv[2]);
 		if ( (pin < CHANNEL_NR_MIN) || (pin > RELAY_CH_NR_MAX))
 		{
 			printf("Relay channel number value out of range!\n");
@@ -579,7 +579,7 @@ static void doRelayRead(int argc, char *argv[])
 			printf("0\n");
 		}
 	}
-	else if (argc == 3)
+	else if (argc == 2)
 	{
 		if (OK != relayGet(dev, &val))
 		{
@@ -743,6 +743,435 @@ static void doRelayTest(int argc, char* argv[])
 	}
 	relaySet(dev, 0);
 }
+
+/*****************************************************************
+***************************LED's**********************************
+ * ***************************************************************
+ */
+int ledChSet(int dev, u8 channel, OutStateEnumType state)
+{
+	int resp = 0;
+	u8 buff[2];
+
+	if ( (channel < CHANNEL_NR_MIN) || (channel > LED_CH_NR_MAX))
+	{
+		printf("Invalid led nr!\n");
+		return ERROR;
+	}
+	if (FAIL == i2cMem8Read(dev, I2C_LED_VAL_ADD, buff, 1))
+	{
+		return FAIL;
+	}
+
+	switch (state)
+	{
+	case OFF:
+		buff[0] &= ~ (1 << (channel - 1));
+		resp = i2cMem8Write(dev, I2C_LED_VAL_ADD, buff, 1);
+		break;
+	case ON:
+		buff[0] |= 1 << (channel - 1);
+		resp = i2cMem8Write(dev, I2C_LED_VAL_ADD, buff, 1);
+		break;
+	default:
+		printf("Invalid led state!\n");
+		return ERROR;
+		break;
+	}
+	return resp;
+}
+
+int ledChGet(int dev, u8 channel, OutStateEnumType* state)
+{
+	u8 buff[2];
+
+	if (NULL == state)
+	{
+		return ERROR;
+	}
+
+	if ( (channel < CHANNEL_NR_MIN) || (channel > LED_CH_NR_MAX))
+	{
+		printf("Invalid led nr!\n");
+		return ERROR;
+	}
+
+	if (FAIL == i2cMem8Read(dev, I2C_LED_VAL_ADD, buff, 1))
+	{
+		return ERROR;
+	}
+
+	if (buff[0] & (1 << (channel - 1)))
+	{
+		*state = ON;
+	}
+	else
+	{
+		*state = OFF;
+	}
+	return OK;
+}
+
+int ledSet(int dev, int val)
+{
+	u8 buff[2];
+
+	buff[0] = 0x0f & val;
+
+	return i2cMem8Write(dev, I2C_LED_VAL_ADD, buff, 1);
+}
+
+int ledGet(int dev, int* val)
+{
+	u8 buff[2];
+
+	if (NULL == val)
+	{
+		return ERROR;
+	}
+	if (FAIL == i2cMem8Read(dev, I2C_LED_VAL_ADD, buff, 1))
+	{
+		return ERROR;
+	}
+	*val = buff[0];
+	return OK;
+}
+
+static void doLedWrite(int argc, char *argv[]);
+const CliCmdType CMD_LED_WRITE =
+{
+	"ledwr",
+	1,
+	&doLedWrite,
+	"\tledwr:		Set leds On/Off\n",
+	"\tUsage:		ti ledwr <channel> <0/1>\n",
+	"\tUsage:		ti ledwr <value>\n",
+	"\tExample:		ti ledwr 2 1; Turn led #2 On\n"};
+
+static void doLedWrite(int argc, char *argv[])
+{
+	int pin = 0;
+	OutStateEnumType state = STATE_COUNT;
+	int val = 0;
+	int dev = 0;
+	OutStateEnumType stateR = STATE_COUNT;
+	int valR = 0;
+	int retry = 0;
+
+	if ( (argc != 3) && (argc != 4))
+	{
+		printf("%s", CMD_LED_WRITE.usage1);
+		printf("%s", CMD_LED_WRITE.usage2);
+		exit(1);
+	}
+
+	dev = doBoardInit();
+	if (dev <= 0)
+	{
+		exit(1);
+	}
+	if (argc == 4)
+	{
+		pin = atoi(argv[2]);
+		if ( (pin < CHANNEL_NR_MIN) || (pin > LED_CH_NR_MAX))
+		{
+			printf("Led channel number value out of range\n");
+			exit(1);
+		}
+
+		/**/if ( (strcasecmp(argv[3], "up") == 0)
+			|| (strcasecmp(argv[3], "on") == 0))
+			state = ON;
+		else if ( (strcasecmp(argv[3], "down") == 0)
+			|| (strcasecmp(argv[3], "off") == 0))
+			state = OFF;
+		else
+		{
+			if ( (atoi(argv[3]) >= STATE_COUNT) || (atoi(argv[3]) < 0))
+			{
+				printf("Invalid led state!\n");
+				exit(1);
+			}
+			state = (OutStateEnumType)atoi(argv[3]);
+		}
+
+		retry = RETRY_TIMES;
+
+		while ( (retry > 0) && (stateR != state))
+		{
+			if (OK != ledChSet(dev, pin, state))
+			{
+				printf("Fail to write led\n");
+				exit(1);
+			}
+			if (OK != ledChGet(dev, pin, &stateR))
+			{
+				printf("Fail to read led\n");
+				exit(1);
+			}
+			retry--;
+		}
+#ifdef DEBUG_I
+		if(retry < RETRY_TIMES)
+		{
+			printf("retry %d times\n", 3-retry);
+		}
+#endif
+		if (retry == 0)
+		{
+			printf("Fail to write led\n");
+			exit(1);
+		}
+	}
+	else
+	{
+		val = atoi(argv[2]);
+		if (val < 0 || val > 0x0f)
+		{
+			printf("Invalid led value\n");
+			exit(1);
+		}
+
+		retry = RETRY_TIMES;
+		valR = -1;
+		while ( (retry > 0) && (valR != val))
+		{
+
+			if (OK != ledSet(dev, val))
+			{
+				printf("Fail to write led!\n");
+				exit(1);
+			}
+			if (OK != ledGet(dev, &valR))
+			{
+				printf("Fail to read led!\n");
+				exit(1);
+			}
+		}
+		if (retry == 0)
+		{
+			printf("Fail to write led!\n");
+			exit(1);
+		}
+	}
+}
+
+static void doLedRead(int argc, char *argv[]);
+const CliCmdType CMD_LED_READ =
+{
+	"ledrd",
+	1,
+	&doLedRead,
+	"\tledrd:		Read leds  status\n",
+	"\tUsage:		ti ledrd <channel>\n",
+	"\tUsage:		ti ledrd\n",
+	"\tExample:		ti ledrd 2; Read Status of Led #2 \n"};
+
+static void doLedRead(int argc, char *argv[])
+{
+	int pin = 0;
+	int val = 0;
+	int dev = 0;
+	OutStateEnumType state = STATE_COUNT;
+
+	dev = doBoardInit();
+	if (dev <= 0)
+	{
+		exit(1);
+	}
+
+	if (argc == 3)
+	{
+		pin = atoi(argv[2]);
+		if ( (pin < CHANNEL_NR_MIN) || (pin > LED_CH_NR_MAX))
+		{
+			printf("Led channel number value out of range!\n");
+			exit(1);
+		}
+
+		if (OK != ledChGet(dev, pin, &state))
+		{
+			printf("Fail to read!\n");
+			exit(1);
+		}
+		if (state != 0)
+		{
+			printf("1\n");
+		}
+		else
+		{
+			printf("0\n");
+		}
+	}
+	else if (argc == 2)
+	{
+		if (OK != ledGet(dev, &val))
+		{
+			printf("Fail to read!\n");
+			exit(1);
+		}
+		printf("%d\n", val);
+	}
+	else
+	{
+		printf("%s", CMD_LED_READ.usage1);
+		printf("%s", CMD_LED_READ.usage2);
+		exit(1);
+	}
+}
+
+static void doLedTest(int argc, char* argv[]);
+const CliCmdType CMD_LED_TEST =
+{
+	"ledtest",
+	1,
+	&doLedTest,
+	"\tledtest:		Turn ON and OFF the leds until press a key\n",
+	"\tUsage:		ti ledtest\n",
+	"",
+	"\tExample:		ti ledtest\n"};
+
+static void doLedTest(int argc, char* argv[])
+{
+	int dev = 0;
+	int i = 0;
+	int retry = 0;
+	int trVal;
+	int valR;
+	int ledResult = 0;
+	FILE* file = NULL;
+	const u8 ledOrder[LED_CH_NR_MAX] =
+	{
+		1,
+		2,
+		3,
+		4,};
+
+	dev = doBoardInit();
+	if (dev <= 0)
+	{
+		exit(1);
+	}
+	if (argc == 3)
+	{
+		file = fopen(argv[2], "w");
+		if (!file)
+		{
+			printf("Fail to open result file\n");
+			//return -1;
+		}
+	}
+//led test****************************
+	if (strcasecmp(argv[1], "ledtest") == 0)
+	{
+		trVal = 0;
+		printf(
+			"Are all leds and LEDs turning on and off in sequence?\nPress y for Yes or any key for No....");
+		startThread();
+		while (ledResult == 0)
+		{
+			for (i = 0; i < LED_CH_NR_MAX; i++)
+			{
+				ledResult = checkThreadResult();
+				if (ledResult != 0)
+				{
+					break;
+				}
+				valR = 0;
+				trVal = (u8)1 << (ledOrder[i] - 1);
+
+				retry = RETRY_TIMES;
+				while ( (retry > 0) && ( (valR & trVal) == 0))
+				{
+					if (OK != ledChSet(dev, ledOrder[i], ON))
+					{
+						retry = 0;
+						break;
+					}
+
+					if (OK != ledGet(dev, &valR))
+					{
+						retry = 0;
+					}
+				}
+				if (retry == 0)
+				{
+					printf("Fail to write led\n");
+					if (file)
+						fclose(file);
+					exit(1);
+				}
+				busyWait(150);
+			}
+
+			for (i = 0; i < LED_CH_NR_MAX; i++)
+			{
+				ledResult = checkThreadResult();
+				if (ledResult != 0)
+				{
+					break;
+				}
+				valR = 0xff;
+				trVal = (u8)1 << (ledOrder[i] - 1);
+				retry = RETRY_TIMES;
+				while ( (retry > 0) && ( (valR & trVal) != 0))
+				{
+					if (OK != ledChSet(dev, ledOrder[i], OFF))
+					{
+						retry = 0;
+					}
+					if (OK != ledGet(dev, &valR))
+					{
+						retry = 0;
+					}
+				}
+				if (retry == 0)
+				{
+					printf("Fail to write led!\n");
+					if (file)
+						fclose(file);
+					exit(1);
+				}
+				busyWait(150);
+			}
+		}
+	}
+	else
+	{
+		usage();
+		exit(1);
+	}
+	if (ledResult == YES)
+	{
+		if (file)
+		{
+			fprintf(file, "Led Test ............................ PASS\n");
+		}
+		else
+		{
+			printf("Led Test ............................ PASS\n");
+		}
+	}
+	else
+	{
+		if (file)
+		{
+			fprintf(file, "Led Test ............................ FAIL!\n");
+		}
+		else
+		{
+			printf("Led Test ............................ FAIL!\n");
+		}
+	}
+	if (file)
+	{
+		fclose(file);
+	}
+	ledSet(dev, 0);
+}
+
+
+//***********************CONTACTS ***********************************
 
 int contactChGet(int dev, u8 channel, OutStateEnumType* state)
 {
@@ -2822,6 +3251,9 @@ const CliCmdType* gCmdArray[] =
 	&CMD_TRIAC_WRITE,
 	&CMD_TRIAC_READ,
 	&CMD_TEST,
+	&CMD_LED_WRITE,
+	&CMD_LED_READ,
+	&CMD_LED_TEST,
 	&CMD_CONTACT_READ,
 	&CMD_COUNTER_READ,
 	&CMD_PPS_READ,
@@ -2853,6 +3285,7 @@ const CliCmdType* gCmdArray[] =
 	&CMD_RTC_SET,
 	&CMD_BCK_BATT_GET,
 	&CMD_PWR_STAT_GET,
+
 	NULL}; //null terminated array of cli structure pointers
 
 int main(int argc, char *argv[])
