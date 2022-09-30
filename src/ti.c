@@ -20,9 +20,8 @@
 
 #define VERSION_BASE	(int)1
 #define VERSION_MAJOR	(int)0
-#define VERSION_MINOR	(int)4
+#define VERSION_MINOR	(int)5
 
-#define UNUSED(X) (void)X      /* To avoid gcc/g++ warnings */
 
 char *warranty =
 	"	       Copyright (c) 2016-2022 Sequent Microsystems\n"
@@ -2933,6 +2932,97 @@ static void doWdtGetOffPeriod(int argc, char *argv[])
 	}
 }
 
+static void doWdtSetStayOnBattery(int argc, char *argv[]);
+const CliCmdType CMD_WDT_SET_STAY_ON_BATTERY =
+	{
+		"sobwr",
+		1,
+		&doWdtSetStayOnBattery,
+		"\tsobwr:	Set the \"Stay on Battery\" parameter. \n\t\t\tIf this is 0 when watchdog expire and main power is not present, the card shut down until the main power is back \n",
+		"\tUsage:		ti sobwr <val> (0/1)\n",
+		"",
+		"\tExample:		ti sobwr 1; Turn on the \"Stay on Battery\" parameter.\n"};
+
+static void doWdtSetStayOnBattery(int argc, char *argv[])
+{
+	int dev = 0;
+	u8 state = 0;
+
+
+	dev = doBoardInit();
+	if (dev <= 0)
+	{
+		exit(1);
+	}
+
+	if (argc == 3)
+	{
+
+		if(state <= atoi(argv[2]))
+		{
+			state = 0;
+		}
+		if (atoi(argv[2]) >= 1)
+		{
+			state = 1;
+		}
+
+		if (OK
+			!= i2cMem8Write(dev, I2C_WDT_KEEP_POWER_ON_BATTERY, &state, 1))
+		{
+			printf("Fail to write Stay on Battery parameter!\n");
+			exit(1);
+		}
+	}
+	else
+	{
+		printf("Invalid params number:\n %s", CMD_WDT_SET_STAY_ON_BATTERY.usage1);
+		exit(1);
+	}
+}
+
+static void doWdtGetStayOnBattery(int argc, char *argv[]);
+const CliCmdType CMD_WDT_GET_STAY_ON_BATTERY =
+	{
+		"sobrd",
+		1,
+		&doWdtGetStayOnBattery,
+		"\tsobrd:	Returns the \"Stay on Battery\" parameter. \n\t\t\tIf this is 0 when watchdog expire and main power is not present, the card shut down until the main power is back \n",
+		"\tUsage:		ti sobrd\n",
+		"",
+		"\tExample:		ti sobrd; Returns 0 or 1  \n"};
+
+static void doWdtGetStayOnBattery(int argc, char *argv[])
+{
+	int dev = 0;
+	u8 value = 0;
+
+	UNUSED(argv);
+	dev = doBoardInit();
+	if (dev <= 0)
+	{
+		exit(1);
+	}
+
+	if (argc == 2)
+	{
+		if (OK != i2cMem8Read(dev, I2C_WDT_KEEP_POWER_ON_BATTERY, &value, 1))
+		{
+			printf("Fail to read Stay on battery parameter!\n");
+			exit(1);
+		}
+
+		printf("%d\n", (int)value);
+	}
+	else
+	{
+		printf("Invalid params number:\n %s", CMD_WDT_GET_PERIOD.usage1);
+		exit(1);
+	}
+}
+
+
+
 int rtcBatteryVoltGet(int dev, float* val)
 {
 	u8 buff[2];
@@ -3285,7 +3375,10 @@ const CliCmdType* gCmdArray[] =
 	&CMD_RTC_SET,
 	&CMD_BCK_BATT_GET,
 	&CMD_PWR_STAT_GET,
-
+	&CMD_WDT_SET_STAY_ON_BATTERY,
+	&CMD_WDT_GET_STAY_ON_BATTERY,
+	&CMD_RS485_READ,
+	&CMD_RS485_WRITE,
 	NULL}; //null terminated array of cli structure pointers
 
 int main(int argc, char *argv[])

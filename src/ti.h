@@ -3,6 +3,7 @@
 
 #include <stdint.h>
 
+#define UNUSED(X) (void)X      /* To avoid gcc/g++ warnings */
 #define ADC_CH_NO	4
 #define DAC_CH_NO	4
 #define THERM_CH_NO 8
@@ -15,6 +16,7 @@
 #define COUNTER_SIZE 4
 #define DRY_CONTACT_COUNT	8
 #define DRY_CONTACT_CONTOR_SIZE 4
+#define DRY_CONTACT_PPS_SIZE 2
 
 #define RETRY_TIMES	10
 #define CALIBRATION_KEY 0xaa
@@ -52,7 +54,7 @@ enum
 	SPARE3,
 	I2C_U0_10_IN_VAL8_ADD,
 	SPARE4,
-	I2C_THERM_CH1,//thermistors
+	I2C_THERM_CH1, //thermistors
 	SP21,
 	I2C_THERM_CH2,
 	SP22,
@@ -68,7 +70,7 @@ enum
 	SP33,
 	I2C_THERM_CH8,
 	SP34,
-	I2C_R_1K_CH1,//universal 1k thermistors
+	I2C_R_1K_CH1, //universal 1k thermistors
 	SP121,
 	I2C_R_1K_CH2,
 	SP122,
@@ -76,7 +78,7 @@ enum
 	SP123,
 	I2C_R_1K_CH4,
 	SP124,
-	I2C_R_10K_CH1,// univeral 10k thermistors
+	I2C_R_10K_CH1, // univeral 10k thermistors
 	SP131,
 	I2C_R_10K_CH2,
 	SP132,
@@ -133,7 +135,7 @@ enum
 	I2C_DIAG_12V_MEM_ADD1,
 	I2C_DIAG_V_BATT_MEM_ADD,
 	I2C_DIAG_V_BATT_MEM_ADD1,
-	I2C_DIAG_POWER_STATE_MEM_ADD,// 0- charging, 1 - charged, 3 - charge fault, 4 - Vin disconnected
+	I2C_DIAG_POWER_STATE_MEM_ADD, // 0- charging, 1 - charged, 3 - charge fault, 4 - Vin disconnected
 	I2C_REVISION_HW_MAJOR_MEM_ADD = 0x78,
 	I2C_REVISION_HW_MINOR_MEM_ADD,
 	I2C_REVISION_MAJOR_MEM_ADD,
@@ -155,12 +157,14 @@ enum
 	I2C_MEM_PWM_IN3 = I2C_MEM_PWM_IN2 + 2,
 	I2C_MEM_PWM_IN4 = I2C_MEM_PWM_IN3 + 2,
 	I2C_MEM_RTC_VBAT = I2C_MEM_PWM_IN4 + 2,
-	I2C_MEM_DRY_CONTACT_PPS1 = I2C_MEM_RTC_VBAT +2,
-	
+	I2C_MEM_DRY_CONTACT_PPS1 = I2C_MEM_RTC_VBAT + 2,
+	I2C_WDT_KEEP_POWER_ON_BATTERY = I2C_MEM_DRY_CONTACT_PPS1
+		+ DRY_CONTACT_PPS_SIZE * DRY_CONTACT_COUNT, // 1 byte
 	SLAVE_BUFF_SIZE = 255
 } I2C_MEM_ADD;
 
-enum CAL_CH_START_ID{
+enum CAL_CH_START_ID
+{
 	CAL_0_10V_OUT_START_ID = 1,
 	CAL_0_10V_OUT_STOP_ID = 4,
 	CAL_0_10V_IN_START_ID,
@@ -172,7 +176,8 @@ enum CAL_CH_START_ID{
 
 };
 
-enum AQ_POWER_CHARGE_STATUS{
+enum AQ_POWER_CHARGE_STATUS
+{
 	CHARGING = 0,
 	CHARGE_END,
 	CHARGE_FAULT,
@@ -194,6 +199,7 @@ enum AQ_POWER_CHARGE_STATUS{
 #define ERROR	-1
 #define OK		0
 #define FAIL	-1
+#define ARG_CNT_ERR -2
 
 #define SLAVE_OWN_ADDRESS_BASE 0x1f
 
@@ -210,23 +216,28 @@ typedef enum
 
 typedef struct
 {
- const char* name;
- const int namePos;
- void(*pFunc)(int, char**);
- const char* help;
- const char* usage1;
- const char* usage2;
- const char* example;
-}CliCmdType;
+	const char *name;
+	const int namePos;
+	void (*pFunc)(int, char**);
+	const char *help;
+	const char *usage1;
+	const char *usage2;
+	const char *example;
+} CliCmdType;
 
-typedef struct
-	__attribute__((packed))
-	{
-		unsigned int mbBaud :24;
-		unsigned int mbType :4;
-		unsigned int mbParity :2;
-		unsigned int mbStopB :2;
-		unsigned int add:8;
-	} ModbusSetingsType;
-const CliCmdType* gCmdArray[];
+typedef struct __attribute__((packed))
+{
+	unsigned int mbBaud :24;
+	unsigned int mbType :4;
+	unsigned int mbParity :2;
+	unsigned int mbStopB :2;
+	unsigned int add :8;
+} ModbusSetingsType;
+int doBoardInit(void);
+// RS-485 CLI structures
+extern const CliCmdType CMD_RS485_READ;
+extern const CliCmdType CMD_RS485_WRITE;
+
+extern const CliCmdType *gCmdArray[];
+
 #endif //RELAY8_H_
