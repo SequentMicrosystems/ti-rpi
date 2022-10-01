@@ -1,5 +1,3 @@
-[![ti-rpi](res/sequent.jpg)](https://sequentmicrosystems.com)
-
 # Modbus
 
 The Heatweb Controller can be accessed trough Modbus RTU protocol over RS-485 port.
