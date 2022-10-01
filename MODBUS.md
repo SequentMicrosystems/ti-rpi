@@ -35,7 +35,7 @@ Acces level Read/Write, Size 1 bit
 |	COIL_LED4 | 0006 | 0x07 |
 |	COIL_DRY_C_RISING1 | 0007 | 0x08 |
 |	COIL_DRY_C_RISING2 | 0008 | 0x09 |
-|	COIL_DRY_C_RISING3  0009 | 0x0a |
+|	COIL_DRY_C_RISING3 | 0009 | 0x0a |
 |	COIL_DRY_C_RISING4 | 0010 | 0x0b |
 |	COIL_DRY_C_RISING5 | 0011 | 0x0c |
 |	COIL_DRY_C_RISING6 | 0012 | 0x0d |
@@ -60,8 +60,11 @@ Acces level Read/Write, Size 1 bit
 |	COIL_RST_CNT_DRY_C8 | 0031 | 0x20 |
 
 
-OPTO_RISING_COUNT coil enable/disable counting on rising edge of coresponding opto channel 
-OPTO_FALLING_COUNT coil enable/disable counting on falling edge of coresponding opto channel 
+COIL_DRY_C_RISING[x] coil enable/disable counting on rising edge of coresponding dry contact channel 
+
+COIL_DRY_C_FALLING[x] coil enable/disable counting on falling edge of coresponding dry contact channel 
+
+COIL_RST_CNT_DRY_C[x] coil resets the counter for the coresponding dry contact channel 
 
 ### Discrete Inputs
 
