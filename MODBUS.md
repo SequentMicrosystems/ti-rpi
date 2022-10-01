@@ -1,7 +1,8 @@
 # Modbus
 
-The Heatweb Controller can be accessed trough Modbus RTU protocol over RS-485 port.
-You can set-up the RS-485 port with **ti** command.
+The Heatweb Controller can be accessed via Modbus RTU protocol over RS-485 port. 
+
+You can set up the RS-485 port with **ti** command.
 
 Example:
 ```bash
