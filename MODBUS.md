@@ -1,6 +1,6 @@
 # Modbus
 
-The Heatweb Controller can be accessed via Modbus RTU protocol over RS-485 port. 
+The Heatweb Controller can be accessed via Modbus RTU protocol over RS-485 port. For this you need to disconnect the Raspberry UART port from the RS485-1 port by removing the jumpers 485-TX and 485-RX.
 
 You can set up the RS-485 port with **ti** command.
 
