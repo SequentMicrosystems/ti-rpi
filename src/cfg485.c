@@ -149,11 +149,11 @@ void doRs485Write(int argc, char *argv[])
 
 	if (argc == 7)
 	{
-		mode = 0xff & atoi(argv[3]);
-		baud = atoi(argv[4]);
-		stopB = 0xff & atoi(argv[5]);
-		parity = 0xff & atoi(argv[6]);
-		add = 0xff & atoi(argv[7]);
+		mode = 0xff & atoi(argv[2]);
+		baud = atoi(argv[3]);
+		stopB = 0xff & atoi(argv[4]);
+		parity = 0xff & atoi(argv[5]);
+		add = 0xff & atoi(argv[6]);
 		if (OK != rs485Set(dev, mode, baud, stopB, parity, add))
 		{
 			printf("Fail to write RS485 settings!\n");
