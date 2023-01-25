@@ -20,11 +20,11 @@
 
 #define VERSION_BASE	(int)1
 #define VERSION_MAJOR	(int)0
-#define VERSION_MINOR	(int)5
+#define VERSION_MINOR	(int)6
 
 
 char *warranty =
-	"	       Copyright (c) 2016-2022 Sequent Microsystems\n"
+	"	       Copyright (c) 2016-2023 Sequent Microsystems\n"
 		"                                                             \n"
 		"		This program is free software; you can redistribute it and/or modify\n"
 		"		it under the terms of the GNU Leser General Public License as published\n"
@@ -172,7 +172,7 @@ static void doVersion(int argc, char *argv[])
 {
 	UNUSED(argc);
 	UNUSED(argv);
-	printf("ti v%d.%d.%d Copyright (c) 2016 - 2022 Sequent Microsystems\n",
+	printf("ti v%d.%d.%d Copyright (c) 2016 - 2023 Sequent Microsystems\n",
 	VERSION_BASE, VERSION_MAJOR, VERSION_MINOR);
 	printf("\nThis is free software with ABSOLUTELY NO WARRANTY.\n");
 	printf("For details type: ti -warranty\n");
@@ -1892,6 +1892,26 @@ int odSet(int dev, int ch, float val)
 	return OK;
 }
 
+int pwmSet(int dev, int divider)
+{
+	u8 buff[2] = {0, 0};
+	u16 raw = 0;
+	
+	if(divider < 2 || divider > 6400)
+	{
+		printf("Invalid Divider! [2..6400]\n");
+		return ERROR;
+	}
+	raw = (u16)divider;
+	memcpy(buff, &raw, 2);
+	if (OK != i2cMem8Write(dev, I2C_PWM_DIVIDER, buff, 2))
+	{
+		printf("Fail to write!\n");
+		return ERROR;
+	}
+	return OK;
+}
+
 static void doOdRead(int argc, char *argv[]);
 const CliCmdType CMD_OD_READ =
 {
@@ -1978,6 +1998,51 @@ static void doOdWrite(int argc, char *argv[])
 	else
 	{
 		printf("Invalid params number:\n %s", CMD_OD_WRITE.usage1);
+		exit(1);
+	}
+}
+
+static void doPwmfWrite(int argc, char *argv[]);
+const CliCmdType CMD_PWM_DIV_WRITE =
+	{
+		"pwmdiv",
+		1,
+		&doPwmfWrite,
+		"\tpwmdiv:		Set the Open drain channel 2 and 3 pwm frequency divider value (2..6400) f = 6.4Khz/div\n",
+		"\tUsage:		ti pwmdiv <value>\n",
+		"",
+		"\tExample:		ti pwmdiv 2; Set PWM frequency to 3.2Khz\n"};
+
+static void doPwmfWrite(int argc, char *argv[])
+{
+	int dev = 0;
+	int pwm = 0;
+
+	dev = doBoardInit();
+	if (dev <= 0)
+	{
+		exit(1);
+	}
+
+	if (argc == 3)
+	{
+		pwm = atoi(argv[2]);
+		if (pwm < 2 || pwm > 6400)
+		{
+			printf("Invalid pwm value, must be 2..6400 \n");
+			exit(1);
+		}
+
+		if (OK != pwmSet(dev, pwm))
+		{
+			printf("Fail to write!\n");
+			exit(1);
+		}
+		printf("Frequency = %d Hz\n", 6400/pwm);
+	}
+	else
+	{
+		printf("Invalid params number:\n %s", CMD_PWM_DIV_WRITE.usage1);
 		exit(1);
 	}
 }
@@ -3354,6 +3419,7 @@ const CliCmdType* gCmdArray[] =
 	&CMD_DAC_WRITE,
 	&CMD_OD_READ,
 	&CMD_OD_WRITE,
+	&CMD_PWM_DIV_WRITE,
 	&CMD_ADC_READ,
 	&CMD_R1K_READ,
 	&CMD_R10K_READ,
